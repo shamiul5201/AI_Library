@@ -1,0 +1,36 @@
+
+{% extends 'core_designs/base.html' %}
+
+{% block content %}
+
+  <h1 class="title_align">Face Alignment Tool</h1>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="image">Upload an Image:</label>
+        <input type="file" name="image" id="image" accept="image/*" required>
+        <button type="submit">Align Face</button>
+    </form>
+
+    {% if input_image_url %}
+        <div class="image-container">
+            <div>
+                <h3 style="text-align: center;">Uploaded Image:</h3>
+                <img src="{{ input_image_url }}" alt="Input Image">
+            </div>
+            <div>
+                <h3 style="text-align: center;">Aligned Image:</h3>
+                <img src="{{ output_image_url }}" alt="Aligned Image">
+            </div>
+        </div>
+
+        <div class="download-btn">
+            <a href="{{ output_image_url }}" download="aligned_face.jpg">Download Aligned Image</a>
+        </div>
+    {% endif %}
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+{% endblock %}

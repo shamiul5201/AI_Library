@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triangulation Animation</title>
+</head>
+<body>
+    <h1>Upload Image for Triangulation Animation</h1>
+    <form id="uploadForm" enctype="multipart/form-data" method="post">
+        {% csrf_token %}
+        <input type="file" name="image" accept="image/*" required>
+        <button type="submit">Upload</button>
+    </form>
+    <div id="result" style="display: none; margin-top: 20px;">
+        <h2>Results:</h2>
+        <img id="uploadedImage" src="" alt="Uploaded Image" width="300">
+        <video id="animationVideo" width="300" controls>
+            <source src="" type="video/mp4">
+            Your browser does not support video playback.
+        </video>
+    </div>
+    <script>
+        document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const response = await fetch("", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            document.getElementById("uploadedImage").src = data.image_url;
+            document.getElementById("animationVideo").querySelector("source").src = data.animation_url;
+            document.getElementById("animationVideo").load();
+            document.getElementById("result").style.display = "block";
+        });
+    </script>
+</body>
+</html>

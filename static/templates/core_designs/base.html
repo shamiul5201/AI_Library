@@ -1,0 +1,70 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Library</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <!-- Navbar -->
+    <header class="header">
+        <div class="navbar">
+            <h1 class="logo">AI Library</h1>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                    <li><a href="#help">Help</a></li>
+                </ul>
+            </nav>
+            <button id="menu-toggle" class="menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <ul>
+                <li><a href="{% url 'face_alignment' %}">Face Alignment</a></li>
+                <li><a href="#item2">Delaunay Triangulation</a></li>
+                <li><a href="#item3">Item 3</a></li>
+                <li><a href="#item4">Item 4</a></li>
+                <li><a href="#item5">Item 5</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 AI Library. All rights reserved.</p>
+    </footer>
+
+    <script>
+                // Toggle Sidebar Collapse
+                const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        // Navigate to a Page
+        function navigateToPage(url) {
+            window.location.href = url;
+        }
+    </script>
+
+    
+</body>
+</html>
