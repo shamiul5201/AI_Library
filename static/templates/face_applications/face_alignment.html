@@ -1,36 +1,150 @@
-
 {% extends 'core_designs/base.html' %}
 
 {% block content %}
+<section class="face-alignment-section">
+    <h2 class="title_align">Face Alignment Tool</h2>
 
-  <h1 class="title_align">Face Alignment Tool</h1>
+    <div class="button-container">
+        <!-- Image Upload Button -->
+        <label for="image-input" class="upload-btn">
+            <span id="file-name">Choose Image</span>
+            <input type="file" id="image-input" accept="image/*">
+        </label>
 
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <label for="image">Upload an Image:</label>
-        <input type="file" name="image" id="image" accept="image/*" required>
-        <button type="submit">Align Face</button>
-    </form>
+        <!-- Camera Button -->
+        <button id="camera-button" class="button">Capture from Camera</button>
 
-    {% if input_image_url %}
-        <div class="image-container">
-            <div>
-                <h3 style="text-align: center;">Uploaded Image:</h3>
-                <img src="{{ input_image_url }}" alt="Input Image">
-            </div>
-            <div>
-                <h3 style="text-align: center;">Aligned Image:</h3>
-                <img src="{{ output_image_url }}" alt="Aligned Image">
-            </div>
+        <!-- Capture Photo Button (Initially Hidden) -->
+        <button id="capture-button" class="button" style="display: none;">Capture Photo</button>
+    </div>
+
+    <!-- Camera View -->
+    <video id="camera" width="400" height="300" autoplay style="display: none;"></video>
+
+    <!-- Display Original and Aligned Images -->
+    <div id="image-container" class="image-container" style="display: none;">
+        <div>
+            <h3>Original Image:</h3>
+            <img id="original-image" src="" alt="Original Image">
+        </div>
+        <div>
+            <h3>Aligned Face:</h3>
+            <img id="aligned-image" src="" alt="Aligned Image">
+        </div>
+    </div>
+
+    <!-- Download and Reset Button Section -->
+    <div id="download-reset-section" style="display: none;">
+        <!-- Download Button -->
+        <div id="download-btn" class="download-btn">
+            <a href="#" id="download-link" download="aligned_face.jpg">Download Aligned Face</a>
         </div>
 
-        <div class="download-btn">
-            <a href="{{ output_image_url }}" download="aligned_face.jpg">Download Aligned Image</a>
+        <!-- Reset Button -->
+        <div id="reset-btn" class="reset-btn">
+            <button id="reset-button" class="button">Reset Page</button>
         </div>
-    {% endif %}
+    </div>
 
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
+    <!-- Error Message Section -->
+    <div id="error-message" class="error" style="display: none;">
+        Face alignment failed. Please try again.
+    </div>
+</section>
 
+
+
+<!-- JavaScript -->
+<script>
+let cameraStream;
+
+// Function to reset displayed images and hide sections
+function resetImages() {
+    $("#original-image").attr("src", "");
+    $("#aligned-image").attr("src", "");
+    $("#image-container").hide();
+    $("#download-reset-section").hide(); // Hide download and reset buttons
+}
+
+// Reload the page when "Reset Page" button is clicked
+$("#reset-button").click(function () {
+    location.reload();
+});
+
+// Open camera
+$("#camera-button").click(function () {
+    resetImages(); // Reset images when camera is accessed
+
+    const video = document.getElementById("camera");
+    $("#camera").show();
+    $("#capture-button").show();
+    $("#image-input").prop("disabled", true); // Disable upload button while camera is open
+
+    navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+            cameraStream = stream;
+            video.srcObject = stream;
+        })
+        .catch((error) => alert("Unable to access camera."));
+});
+
+// Capture photo from the camera
+$("#capture-button").click(function () {
+    const video = document.getElementById("camera");
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = canvas.toDataURL("image/jpeg");
+
+    // Stop the camera after capturing
+    cameraStream.getTracks().forEach((track) => track.stop());
+    $("#camera").hide();
+    $("#capture-button").hide();
+    $("#image-input").prop("disabled", false); // Enable upload button after capturing
+
+    processImage(imageData);
+});
+
+// Image upload functionality
+$("#image-input").change(function () {
+    if ($("#camera").is(":visible")) {
+        return; // Prevent upload when camera is open
+    }
+
+    resetImages(); // Reset images when a new file is uploaded
+
+    const file = this.files[0];
+    if (file) {
+        $("#file-name").text(file.name); // Show file name
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            processImage(e.target.result);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Send image data to backend for face alignment
+function processImage(imageData) {
+    $.ajax({
+        url: "/face_alignment/",
+        type: "POST",
+        data: JSON.stringify({ image: imageData }),
+        contentType: "application/json",
+        success: function (response) {
+            $("#original-image").attr("src", response.original_image);
+            $("#aligned-image").attr("src", response.aligned_image);
+            $("#image-container").show();
+            $("#download-reset-section").show(); // Show download and reset buttons
+            $("#error-message").hide();
+        },
+        error: function () {
+            $("#error-message").show();
+        },
+    });
+}
+</script>
 {% endblock %}
