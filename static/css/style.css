@@ -167,10 +167,7 @@ body {
 }
 
 /* Face Applications */
-/* Face Alignment Styles */
-
-/* Face Alignment Tool Styles */
-
+/* 01 face alignment */
 /* Title Styling */
 .title_align {
     text-align: center;
@@ -312,3 +309,5 @@ body {
     text-align: center;
     margin-top: 20px;
 }
+
+

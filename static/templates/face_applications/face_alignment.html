@@ -4,22 +4,24 @@
 <section class="face-alignment-section">
     <h2 class="title_align">Face Alignment Tool</h2>
 
-    <div class="button-container">
-        <!-- Image Upload Button -->
-        <label for="image-input" class="upload-btn">
-            <span id="file-name">Choose Image</span>
-            <input type="file" id="image-input" accept="image/*">
-        </label>
+    <form id="upload-image-form" enctype="multipart/form-data">
+        <div class="button-container">
+            <!-- Image Upload Button -->
+            <label for="image-input" class="upload-btn">
+                <span id="file-name">Choose Image</span>
+                <input type="file" id="image-input" accept="image/*">
+            </label>
 
-        <!-- Camera Button -->
-        <button id="camera-button" class="button">Capture from Camera</button>
+            <!-- Camera Button -->
+            <button type="button" id="camera-button" class="button">Capture from Camera</button>
 
-        <!-- Capture Photo Button (Initially Hidden) -->
-        <button id="capture-button" class="button" style="display: none;">Capture Photo</button>
-    </div>
+            <!-- Capture Photo Button (Initially Hidden) -->
+            <button type="button" id="capture-button" class="button" style="display: none;">Capture Photo</button>
+        </div>
 
-    <!-- Camera View -->
-    <video id="camera" width="400" height="300" autoplay style="display: none;"></video>
+        <!-- Camera View -->
+        <video id="camera" width="400" height="300" autoplay style="display: none;"></video>
+    </form>
 
     <!-- Display Original and Aligned Images -->
     <div id="image-container" class="image-container" style="display: none;">
@@ -35,116 +37,111 @@
 
     <!-- Download and Reset Button Section -->
     <div id="download-reset-section" style="display: none;">
-        <!-- Download Button -->
         <div id="download-btn" class="download-btn">
             <a href="#" id="download-link" download="aligned_face.jpg">Download Aligned Face</a>
         </div>
-
-        <!-- Reset Button -->
         <div id="reset-btn" class="reset-btn">
-            <button id="reset-button" class="button">Reset Page</button>
+            <button type="button" id="reset-button" class="button">Reset Page</button>
         </div>
     </div>
 
-    <!-- Error Message Section -->
     <div id="error-message" class="error" style="display: none;">
         Face alignment failed. Please try again.
     </div>
 </section>
 
-
-
-<!-- JavaScript -->
 <script>
 let cameraStream;
 
-// Function to reset displayed images and hide sections
-function resetImages() {
-    $("#original-image").attr("src", "");
-    $("#aligned-image").attr("src", "");
-    $("#image-container").hide();
-    $("#download-reset-section").hide(); // Hide download and reset buttons
-}
+document.getElementById('reset-button').addEventListener('click', () => location.reload());
 
-// Reload the page when "Reset Page" button is clicked
-$("#reset-button").click(function () {
-    location.reload();
+document.getElementById('camera-button').addEventListener('click', () => {
+    resetImages();
+    const video = document.getElementById('camera');
+    video.style.display = 'block';
+    document.getElementById('capture-button').style.display = 'inline-block';
+    document.getElementById('image-input').disabled = true;
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        cameraStream = stream;
+        video.srcObject = stream;
+    }).catch(() => alert('Unable to access camera.'));
 });
 
-// Open camera
-$("#camera-button").click(function () {
-    resetImages(); // Reset images when camera is accessed
-
-    const video = document.getElementById("camera");
-    $("#camera").show();
-    $("#capture-button").show();
-    $("#image-input").prop("disabled", true); // Disable upload button while camera is open
-
-    navigator.mediaDevices
-        .getUserMedia({ video: true })
-        .then((stream) => {
-            cameraStream = stream;
-            video.srcObject = stream;
-        })
-        .catch((error) => alert("Unable to access camera."));
-});
-
-// Capture photo from the camera
-$("#capture-button").click(function () {
-    const video = document.getElementById("camera");
-    const canvas = document.createElement("canvas");
+document.getElementById('capture-button').addEventListener('click', () => {
+    const video = document.getElementById('camera');
+    const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const imageData = canvas.toDataURL("image/jpeg");
-
-    // Stop the camera after capturing
-    cameraStream.getTracks().forEach((track) => track.stop());
-    $("#camera").hide();
-    $("#capture-button").hide();
-    $("#image-input").prop("disabled", false); // Enable upload button after capturing
+    const imageData = canvas.toDataURL('image/jpeg');
+    cameraStream.getTracks().forEach(track => track.stop());
+    video.style.display = 'none';
+    document.getElementById('capture-button').style.display = 'none';
 
     processImage(imageData);
 });
 
-// Image upload functionality
-$("#image-input").change(function () {
-    if ($("#camera").is(":visible")) {
-        return; // Prevent upload when camera is open
-    }
-
-    resetImages(); // Reset images when a new file is uploaded
-
+document.getElementById('image-input').addEventListener('change', function () {
+    resetImages();
     const file = this.files[0];
     if (file) {
-        $("#file-name").text(file.name); // Show file name
         const reader = new FileReader();
-        reader.onload = function (e) {
-            processImage(e.target.result);
-        };
+        reader.onload = e => processImage(e.target.result);
         reader.readAsDataURL(file);
+        document.getElementById('file-name').innerText = file.name;
     }
 });
 
-// Send image data to backend for face alignment
 function processImage(imageData) {
-    $.ajax({
-        url: "/face_alignment/",
-        type: "POST",
-        data: JSON.stringify({ image: imageData }),
-        contentType: "application/json",
-        success: function (response) {
-            $("#original-image").attr("src", response.original_image);
-            $("#aligned-image").attr("src", response.aligned_image);
-            $("#image-container").show();
-            $("#download-reset-section").show(); // Show download and reset buttons
-            $("#error-message").hide();
+    fetch('/face_alignment/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
         },
-        error: function () {
-            $("#error-message").show();
-        },
+        body: JSON.stringify({ image: imageData }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        document.getElementById('original-image').src = data.input_image_url;
+        document.getElementById('aligned-image').src = data.output_image_url;
+        document.getElementById('image-container').style.display = 'flex';
+        document.getElementById('download-reset-section').style.display = 'block';
+        document.getElementById('error-message').style.display = 'none';
+
+        document.getElementById('download-link').href = data.output_image_url;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('error-message').style.display = 'block';
     });
+}
+
+function resetImages() {
+    document.getElementById('original-image').src = '';
+    document.getElementById('aligned-image').src = '';
+    document.getElementById('image-container').style.display = 'none';
+    document.getElementById('download-reset-section').style.display = 'none';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 {% endblock %}
